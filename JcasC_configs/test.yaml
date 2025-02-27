@@ -1,0 +1,46 @@
+jenkins:
+  systemMessage: "Welcome to Jenkins configured with from JCASC Configs! *** new_configs *** poi" # Custom system message
+
+  securityRealm:
+    local:
+      #allowsSignup: false
+      users:
+      - id: "admin"
+        password: "admin123"
+        name: "Administrator"
+  
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Read:authenticated"
+        - "Job/Create:authenticated"
+        - "Job/Configure:authenticated"
+        - "Job/Delete:authenticated"
+        - "Job/Build:authenticated"
+        - "Job/Cancel:authenticated"
+
+  jobs:
+    - script: >
+        job('Seed Job') {
+          scm {
+            git {
+              remote {
+                url 'https://github.com/your-repo/your-repo.git'
+                credentialsId 'your-credentials-id'
+              }
+              branch 'main'
+            }
+          }
+          steps {
+            jobDsl {
+              targets 'jobs/**/*.groovy'
+            }
+          }
+        }
+
+  git:
+    config:
+      - key: "user.name"
+        value: "Your Name"
+      - key: "user.email"
+        value: "your.email@example.com"
