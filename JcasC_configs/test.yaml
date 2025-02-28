@@ -1,6 +1,6 @@
 jenkins:
   systemMessage: "Jenkins configured with JCasC"
-  numExecutors: 0  # Disable executors on controller
+  #numExecutors: 0  # Disable executors on controller
   labelString: "controller"
   mode: NORMAL  # NORMAL or EXCLUSIVE
   quietPeriod: 5
