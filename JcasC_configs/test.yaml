@@ -1,2 +1,14 @@
 jenkins:
   systemMessage: "Jenkins configured with JCasC"
+  #mode: NORMAL  # NORMAL or EXCLUSIVE
+  quietPeriod: 5
+  scmCheckoutRetryCount: 3
+  
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+        - id: "developer"
+          password: "password"
