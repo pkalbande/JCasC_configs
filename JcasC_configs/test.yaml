@@ -1,47 +1,192 @@
 jenkins:
-  systemMessage: "Welcome to Jenkins configured with from JCASC Configs! *** new_configs *** poi" # Custom system message
-
+  systemMessage: "Jenkins configured with JCasC"
+  numExecutors: 0  # Disable executors on controller
+  labelString: "controller"
+  mode: NORMAL  # NORMAL or EXCLUSIVE
+  quietPeriod: 5
+  scmCheckoutRetryCount: 3
+  
   securityRealm:
     local:
-      allowsSignup: "false"
+      allowsSignup: false
       users:
-      - id: "admin"
-        password: "admin123"
-        name: "Administrator"  
-  authorizationStrategy:
-  globalMatrix:
-    permissions:
-      anonymous:
-        - "Overall/Read"
-      authenticated:
-        - "Overall/Read"
-        - "Agent/Build"
-        # ... other authenticated permissions
-      admin:
-        - "Overall/Administer"
+        - id: "admin"
+          password: "admin"
+        - id: "developer"
+          password: "password"
 
-  jobs:
-    - script: >
-        job('Seed Job') {
-          scm {
-            git {
-              remote {
-                url 'https://github.com/your-repo/your-repo.git'
-                credentialsId 'your-credentials-id'
+  authorizationStrategy:
+    roleBased:
+      roles:
+        global:
+          - name: "admin"
+            description: "Jenkins administrators"
+            permissions:
+              - "Overall/Administer"
+            assignments:
+              - "admin"
+          - name: "developer"
+            description: "Jenkins developers"
+            permissions:
+              - "Overall/Read"
+              - "Job/Build"
+              - "Job/Read"
+              - "Job/Workspace"
+            assignments:
+              - "developer"
+
+  remotingSecurity:
+    enabled: true
+
+  clouds:
+    - kubernetes:
+        name: "kubernetes"
+        serverUrl: "https://kubernetes.default.svc.cluster.local"
+        namespace: "${NAMESPACE}"
+        jenkinsUrl: "http://jenkins.${NAMESPACE}.svc.cluster.local:8080"
+        jenkinsTunnel: "jenkins-agent.${NAMESPACE}.svc.cluster.local:50000"
+        containerCapStr: "10"
+        connectTimeout: 300
+        readTimeout: 300
+        templates:
+          - name: "default-jnlp-agent"
+            namespace: "${NAMESPACE}"
+            label: "jenkins-agent"
+            nodeUsageMode: NORMAL
+            containers:
+              - name: "jnlp"
+                image: "jenkins/inbound-agent:4.11.2-4"
+                alwaysPullImage: false
+                workingDir: "/home/jenkins/agent"
+                ttyEnabled: false
+                resourceRequestCpu: "500m"
+                resourceLimitCpu: "1000m"
+                resourceRequestMemory: "1Gi"
+                resourceLimitMemory: "2Gi"
+            idleMinutes: 10
+            activeDeadlineSeconds: 600
+            serviceAccount: "jenkins"
+            slaveConnectTimeout: 300
+
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: true
+
+unclassified:
+  location:
+    url: "http://jenkins.example.com/"
+    adminEmail: "admin@example.com"
+  
+  mailer:
+    smtpHost: "smtp.example.com"
+    useSsl: true
+    smtpPort: "465"
+    replyToAddress: "no-reply@example.com"
+    charset: "UTF-8"
+  
+  gitSCM:
+    globalConfigName: "Jenkins"
+    globalConfigEmail: "jenkins@example.com"
+  
+  sonarGlobalConfiguration:
+    installations:
+      - name: "SonarQube"
+        serverUrl: "http://sonarqube:9000"
+        credentialsId: "sonarqube-token"
+  
+  slackNotifier:
+    teamDomain: "example"
+    tokenCredentialId: "slack-token"
+    botUser: true
+    room: "#jenkins-builds"
+
+tool:
+  git:
+    installations:
+      - name: "Default"
+        home: "git"
+  
+  maven:
+    installations:
+      - name: "Maven 3"
+        home: "/usr/share/maven"
+        properties:
+          - installSource:
+              installers:
+                - maven:
+                    id: "3.8.6"
+  
+  jdk:
+    installations:
+      - name: "JDK 11"
+        home: "/usr/lib/jvm/java-11-openjdk"
+        properties:
+          - installSource:
+              installers:
+                - adoptOpenJdkInstaller:
+                    id: "jdk-11.0.11+9"
+
+jobs:
+  - file: /var/jenkins_home/jobs/seed-job.groovy
+  - script: >
+      pipelineJob('example-pipeline') {
+        definition {
+          cps {
+            script('''
+              pipeline {
+                agent {
+                  label 'jenkins-agent'
+                }
+                stages {
+                  stage('Build') {
+                    steps {
+                      echo 'Building...'
+                    }
+                  }
+                  stage('Test') {
+                    steps {
+                      echo 'Testing...'
+                    }
+                  }
+                  stage('Deploy') {
+                    steps {
+                      echo 'Deploying...'
+                    }
+                  }
+                }
               }
-              branch 'main'
-            }
-          }
-          steps {
-            jobDsl {
-              targets 'jobs/**/*.groovy'
-            }
+            ''')
+            sandbox(true)
           }
         }
+      }
 
-  git:
-    config:
-      - key: "user.name"
-        value: "Your Name"
-      - key: "user.email"
-        value: "your.email@example.com"
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-credentials"
+              username: "githubuser"
+              password: "${GITHUB_TOKEN}"
+              description: "GitHub credentials"
+          - string:
+              scope: GLOBAL
+              id: "sonarqube-token"
+              secret: "${SONARQUBE_TOKEN}"
+              description: "SonarQube token"
+          - string:
+              scope: GLOBAL
+              id: "slack-token"
+              secret: "${SLACK_TOKEN}"
+              description: "Slack token"
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: "ssh-deployment-key"
+              username: "deployer"
+              passphrase: "${SSH_KEY_PASSPHRASE}"
+              description: "SSH deployment key"
+              privateKeySource:
+                directEntry:
+                  privateKey: "${SSH_PRIVATE_KEY}"
