@@ -1,6 +1,6 @@
 jenkins:
   systemMessage: "Jenkins configured with JCasC"
-  mode: NORMAL  # NORMAL or EXCLUSIVE
+  #mode: NORMAL  # NORMAL or EXCLUSIVE
   quietPeriod: 5
   scmCheckoutRetryCount: 3
   
