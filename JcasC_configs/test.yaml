@@ -1,13 +1,13 @@
 jenkins:
-  systemMessage: "Jenkins configured with JCasC"
-  #mode: NORMAL  # NORMAL or EXCLUSIVE
+  systemMessage: "Jenkins configured with JCasC ***"
+  mode: NORMAL  # Explicitly set mode (NORMAL or EXCLUSIVE), uncommented
   quietPeriod: 5
   scmCheckoutRetryCount: 3
   securityRealm:
     local:
-      allowsSignup: false
+      enableCaptcha: false
       users:
         - id: "admin"
-          password: "admin"
+          password: "admin"  # Use environment variable for security
         - id: "developer"
-          password: "password"
+          password: "password"  # Use environment variable for security
